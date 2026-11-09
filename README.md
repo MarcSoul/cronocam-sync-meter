@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://cronocam.com">
+    <img src="https://cronocam.com/assets/cronocam-logo-v2-opt.png" alt="Logo de Cronocam" width="120" height="120">
+  </a>
+</p>
+
 # Cronocam Sync Meter
 
 Filtro de OBS Studio para medir en directo el desfase entre dos fuentes de audio.
