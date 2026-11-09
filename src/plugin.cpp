@@ -264,6 +264,7 @@ obs_properties_t *properties(void *data)
             ? reading_card("&mdash;", obs_module_text("CollectingAudio"))
             : filter->display;
         obs_properties_add_text(props, "reading", display.c_str(), OBS_TEXT_INFO);
+        obs_properties_add_text(props, "reading_legend", obs_module_text("ReadingLegend"), OBS_TEXT_INFO);
     }
     SourceList context{list, parent};
     obs_enum_sources(list_source, &context);
