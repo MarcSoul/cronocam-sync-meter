@@ -1,1 +1,1 @@
-# cronocam-synk-meter
+# cronocam-sync-meter
