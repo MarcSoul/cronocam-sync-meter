@@ -4,12 +4,28 @@ Filtro de OBS Studio para medir en directo el desfase entre dos fuentes de audio
 Pensado para comparar una entrada de mesa con el audio de referencia de una cámara.
 No necesita grabación, FFmpeg, Python ni una aplicación auxiliar.
 
+## La suite Cronocam
+
+Cronocam es una suite de herramientas para facilitar la sincronización de cámaras
+con el sonido en producciones multicámara. Ayuda a identificar qué señal llega
+antes y cuántos milisegundos de retardo hay entre ellas, para que puedas ajustar
+la sincronía de cada cámara con una referencia común, como el audio de mesa.
+
+- **Audio contra audio.** Cronocam Sync Meter compara en directo el audio de la
+  cámara con otra fuente de audio en OBS Studio, como la entrada de mesa.
+- **Imagen contra audio.** Para medir directamente el desfase entre la imagen
+  de una cámara y una referencia de audio, usa la herramienta web de
+  [Cronocam.com](https://cronocam.com).
+
+[Cronocam.com](https://cronocam.com) es la web oficial de la suite y el punto de
+acceso a sus herramientas.
+
 **Estado:** prototipo. El correlador pasa las pruebas con señales sintéticas. Quedan
 por validar los paquetes y el funcionamiento del filtro dentro de OBS en Windows y macOS.
 
 ## Instalación
 
-Cuando haya una versión publicada, abre **Releases** y elige el paquete de tu sistema.
+Abre [Releases](https://github.com/MarcSoul/cronocam-sync-meter/releases) y elige el paquete de tu sistema.
 
 | Sistema | Paquete | Instalación |
 | --- | --- | --- |
@@ -44,7 +60,7 @@ deja el audio de cabina intacto. El audio de cámara se puede mantener fuera de
 las pistas de emisión y grabación desde las propiedades avanzadas de audio.
 La distancia entre micrófonos y el sonido de sala también influyen en la
 medición. Esta lectura corresponde a los dos audios en los puntos de captura
-del plugin. Para medir imagen contra audio se usa Cronocam.
+del plugin. Para medir imagen contra audio, usa [Cronocam.com](https://cronocam.com).
 
 ## Compilación y publicación
 
