@@ -171,29 +171,44 @@ obs_audio_data *pass_audio(void *data, obs_audio_data *audio)
     return audio;
 }
 
+std::string reading_card(const std::string &value, const char *caption = nullptr)
+{
+    std::string card = "<html><table width=\"224\" cellspacing=\"0\" cellpadding=\"12\">"
+                       "<tr><td align=\"center\" bgcolor=\"#182430\">"
+                       "<span style=\"font-size:28pt; font-weight:bold; color:#A5F3FC;\">";
+    card += value;
+    card += "</span>";
+    if (caption) {
+        card += "<br/><span style=\"font-size:9pt; color:#E2E8F0;\">";
+        card += caption;
+        card += "</span>";
+    }
+    return card + "</td></tr></table></html>";
+}
+
 std::string reading(Filter &filter, uint64_t now)
 {
     if (filter.camera_uuid.empty())
-        return obs_module_text("SelectCamera");
+        return reading_card("&mdash;", obs_module_text("SelectCamera"));
     Envelope reference{}, camera{};
     {
         const std::scoped_lock lock(filter.reference.mutex, filter.camera.mutex);
         if (!filter.reference.received || !filter.camera.received ||
             now - std::min({now, filter.reference.received, filter.camera.received}) > 1'500'000'000ULL)
-            return obs_module_text("WaitingAudio");
+            return reading_card("&mdash;", obs_module_text("WaitingAudio"));
         const auto last = std::min(filter.reference.latest, filter.camera.latest);
         if (last < span || !copy_envelope(filter.reference, last - span, reference) ||
             !copy_envelope(filter.camera, last - span, camera))
-            return obs_module_text("CollectingAudio");
+            return reading_card("&mdash;", obs_module_text("CollectingAudio"));
     }
 
     const auto offset = measure(reference, camera);
     if (!offset)
-        return obs_module_text("Uncertain");
+        return reading_card("&mdash;", obs_module_text("Uncertain"));
     if (*offset == 0)
-        return "0 ms";
-    return (*offset > 0 ? "+" : "") + std::to_string(*offset) + " ms · " +
-        obs_module_text(*offset < 0 ? "CameraLater" : "CameraEarlier");
+        return reading_card("0 ms");
+    const auto value = std::string(*offset < 0 ? "&minus;" : "+") + std::to_string(std::abs(*offset)) + " ms";
+    return reading_card(value, obs_module_text(*offset < 0 ? "CameraLater" : "CameraEarlier"));
 }
 
 void tick(void *data, float)
@@ -212,7 +227,7 @@ void tick(void *data, float)
                 obs_source_release(parent);
             }
         }
-        auto display = obs_source_enabled(filter.self) ? reading(filter, now) : obs_module_text("Disabled");
+        auto display = obs_source_enabled(filter.self) ? reading(filter, now) : reading_card("&mdash;", obs_module_text("Disabled"));
         if (display == filter.display)
             return;
         filter.display = std::move(display);
@@ -245,8 +260,10 @@ obs_properties_t *properties(void *data)
         const std::lock_guard lock(filter->configuration);
         if (filter->parent)
             parent = obs_weak_source_get_source(filter->parent);
-        obs_properties_add_text(props, "reading",
-            filter->display.empty() ? obs_module_text("CollectingAudio") : filter->display.c_str(), OBS_TEXT_INFO);
+        const auto display = filter->display.empty()
+            ? reading_card("&mdash;", obs_module_text("CollectingAudio"))
+            : filter->display;
+        obs_properties_add_text(props, "reading", display.c_str(), OBS_TEXT_INFO);
     }
     SourceList context{list, parent};
     obs_enum_sources(list_source, &context);
