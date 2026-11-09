@@ -1,0 +1,4 @@
+.obs-template/
+dist/
+build_*/
+__pycache__/
