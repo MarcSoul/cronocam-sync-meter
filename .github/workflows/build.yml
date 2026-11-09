@@ -71,7 +71,7 @@ jobs:
         run: |
           plugin="$(find .obs-template/build_macos -type d -name 'cronocam-sync-meter.plugin' -path '*/Release/*' -print -quit)"
           test -n "$plugin"
-          lipo -verify_arch arm64 x86_64 "$plugin/Contents/MacOS/cronocam-sync-meter"
+          lipo "$plugin/Contents/MacOS/cronocam-sync-meter" -verify_arch arm64 x86_64
           mkdir -p dist
           ditto -c -k --keepParent "$plugin" "dist/cronocam-sync-meter-$PLUGIN_VERSION-macos-universal.zip"
       - uses: actions/upload-artifact@v4
@@ -81,7 +81,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'Publish Cronocam Sync Meter v0.1.0')
     needs: package
     runs-on: ubuntu-latest
     permissions:
@@ -92,9 +92,15 @@ jobs:
           pattern: cronocam-sync-meter-*
           merge-multiple: true
           path: dist
-      - name: Create draft release
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$GITHUB_REF_TYPE" == branch ]]; then
+            gh release create v0.1.0 dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --prerelease --title "Cronocam Sync Meter v0.1.0" \
+              --notes "Primera versión de prueba. Incluye instalador Windows x64 y plugin universal macOS (Intel y Apple Silicon). El paquete de macOS no está notarizado. Consulta el README para instalarlo. Pendiente de validar el funcionamiento dentro de OBS en ambos sistemas."
+            exit
+          fi
           gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" \
             --verify-tag --draft --title "Cronocam Sync Meter $GITHUB_REF_NAME" --generate-notes
