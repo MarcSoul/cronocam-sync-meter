@@ -13,7 +13,8 @@ constexpr int window = 3 * 1000 / bin_ms;
 constexpr int span = window + 2 * max_lag;
 using Envelope = std::array<float, span>;
 
-inline std::optional<int> measure(const Envelope &reference, const Envelope &camera)
+inline std::optional<int> correlate(const Envelope &reference, const Envelope &camera,
+                                    double minimum_score, double minimum_margin)
 {
     double sum_reference = 0, energy_reference = 0;
     for (int i = max_lag; i < max_lag + window; ++i) {
@@ -47,9 +48,36 @@ inline std::optional<int> measure(const Envelope &reference, const Envelope &cam
         if (std::abs(i - best) >= 6)
             alternative = std::max(alternative, scores[i]);
     }
-    if (best == 0 || best == 2 * max_lag || scores[best] < 0.45 || scores[best] - alternative < 0.08)
+    if (best == 0 || best == 2 * max_lag || scores[best] < minimum_score ||
+        scores[best] - alternative < minimum_margin)
         return std::nullopt;
 
     return (max_lag - best) * bin_ms; // Negative when camera audio arrives later.
+}
+
+inline Envelope onset_envelope(const Envelope &input)
+{
+    Envelope onsets{};
+    // Compare adjacent 20 ms averages to suppress noise and slow gain changes.
+    for (int i = 7; i < span; ++i) {
+        float recent = 0, previous = 0;
+        for (int j = 0; j < 4; ++j) {
+            recent += input[i - j];
+            previous += input[i - 4 - j];
+        }
+        const float rise = std::max(0.0f, (recent - previous) / 4.0f);
+        onsets[i] = std::sqrt(rise);
+    }
+    return onsets;
+}
+
+inline std::optional<int> measure(const Envelope &reference, const Envelope &camera)
+{
+    const auto level = correlate(reference, camera, 0.45, 0.08);
+    const auto onsets = correlate(onset_envelope(reference), onset_envelope(camera), 0.38, 0.08);
+    // Conflicting, individually credible peaks are unsafe for automatic correction.
+    if (level && onsets && std::abs(*level - *onsets) > 15)
+        return std::nullopt;
+    return level ? level : onsets;
 }
 }
