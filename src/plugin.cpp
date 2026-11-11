@@ -89,7 +89,7 @@ void bind(Tap &tap, obs_source_t *source)
         obs_source_add_audio_capture_callback(source, capture, &tap);
 }
 
-bool copy_envelope(const Tap &tap, uint64_t first, Envelope &values)
+int copy_envelope(const Tap &tap, uint64_t first, Envelope &values)
 {
     int missing = 0;
     for (size_t i = 0; i < values.size(); ++i) {
@@ -97,11 +97,12 @@ bool copy_envelope(const Tap &tap, uint64_t first, Envelope &values)
         const auto &bin = tap.bins[index % capacity];
         if (bin.index != index || !bin.samples) {
             ++missing;
+            values[i] = missing_bin;
             continue;
         }
         values[i] = static_cast<float>(std::log1p(1000 * std::sqrt(bin.energy / bin.samples)));
     }
-    return missing < 8;
+    return span - missing;
 }
 
 constexpr const char *delay_id = "marcsoul_audio_delay";
@@ -293,13 +294,23 @@ std::string reading(Filter &filter, uint64_t now)
     Envelope reference{}, camera{};
     {
         const std::scoped_lock lock(filter.reference.mutex, filter.camera.mutex);
-        if (!filter.reference.received || !filter.camera.received ||
-            now - std::min({now, filter.reference.received, filter.camera.received}) > 1'500'000'000ULL)
-            return reading_card("&mdash;", obs_module_text("WaitingAudio"));
+        const auto recent = [now](const Tap &tap) {
+            return tap.received && now - std::min(now, tap.received) <= 1'500'000'000ULL;
+        };
+        if (!recent(filter.reference))
+            return reading_card("&mdash;", obs_module_text("WaitingReference"));
+        if (!recent(filter.camera))
+            return reading_card("&mdash;", obs_module_text("WaitingCamera"));
         const auto last = std::min(filter.reference.latest, filter.camera.latest);
-        if (last < span || !copy_envelope(filter.reference, last - span, reference) ||
-            !copy_envelope(filter.camera, last - span, camera))
+        if (last < span)
             return reading_card("&mdash;", obs_module_text("CollectingAudio"));
+        const int ref_count = copy_envelope(filter.reference, last - span, reference);
+        const int cam_count = copy_envelope(filter.camera, last - span, camera);
+        if (std::min(ref_count, cam_count) < span * 7 / 10) {
+            const auto coverage = std::to_string(ref_count * 100 / span) + "% / " +
+                                  std::to_string(cam_count * 100 / span) + "%";
+            return reading_card(coverage, obs_module_text("AudioCoverage"));
+        }
     }
 
     const auto offset = measure(reference, camera);

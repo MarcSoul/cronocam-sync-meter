@@ -52,5 +52,14 @@ int main()
         sample = static_cast<float>(random() % 1000) / 100;
     assert(!measure(reference, unrelated));
 
+    for (int i = 210; i < 800; i += 31)
+        room_mic[i] = missing_bin;
+    for (int i = 230; i < 750; i += 47)
+        close_mic[i] = missing_bin;
+    const auto gapped = measure(close_mic, room_mic);
+    assert(gapped && std::abs(*gapped + 185) <= 10);
+    room_mic.fill(missing_bin);
+    assert(!measure(close_mic, room_mic));
+
     std::cout << "Delay tests passed\n";
 }
