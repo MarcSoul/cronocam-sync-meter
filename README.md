@@ -68,6 +68,28 @@ La distancia entre micrófonos y el sonido de sala también influyen en la
 medición. Esta lectura corresponde a los dos audios en los puntos de captura
 del plugin. Para medir imagen contra audio, usa [Cronocam.com](https://cronocam.com).
 
+## Corregir el retardo en directo
+
+1. En la fuente de referencia, por ejemplo **Audio de cabina**, añade **Cronocam
+   Audio Delay** y colócalo **el primero de la cadena de filtros**. Empieza en
+   `0 ms` y deja también a cero el desfase de sincronización de esta fuente en
+   **Propiedades de audio avanzadas**.
+2. Coloca **Cronocam Sync Meter** después y elige el audio de la cámara.
+3. Ajusta el retardo mientras ves cuánto desfase queda o pulsa **Ajustar retardo
+   a … ms**. El botón aparece con un único filtro de retardo activo en esa
+   fuente y se habilita cuando hay una lectura fiable y una corrección posible.
+
+Si ya aplicas `250 ms` y el medidor marca `−50 ms`, el botón ajusta el retardo
+total a `300 ms`. El medidor sigue escuchando y tarda unos segundos en volver
+a mostrar un resultado con el audio corregido. Si la referencia ya llega
+tarde y el retardo aplicado es insuficiente para compensarlo al reducirlo,
+aplica retardo a la otra fuente.
+
+**Cronocam Audio Delay** retrasa las muestras de audio hasta `2000 ms`, en
+pasos de `1 ms`. La monitorización de OBS recibe ese mismo audio corregido.
+Si escuchas desde un escritorio remoto, selecciona una salida de
+monitorización que el escritorio remoto pueda reproducir.
+
 ## Compilación y publicación
 
 El workflow **Build Cronocam Sync Meter** compila el plugin nativo con la
