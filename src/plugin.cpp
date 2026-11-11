@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "delay.hpp"
+#include "capture_clock.hpp"
 #include "pcm_delay.hpp"
 
 #include <obs-module.h>
@@ -34,6 +35,8 @@ struct Tap {
     std::array<Bin, capacity> bins{};
     uint64_t latest = 0;
     uint64_t received = 0;
+    CaptureClock clock;
+    bool estimated = false;
     uint32_t sample_rate = 0;
     size_t channels = 0;
 };
@@ -45,8 +48,15 @@ void capture(void *data, obs_source_t *, const audio_data *audio, bool)
     if (!lock || !tap.sample_rate || !audio->frames)
         return;
 
+    const auto arrival = os_gettime_ns();
+    const auto duration = audio->frames * 1'000'000'000ULL / tap.sample_rate;
+    const auto block = tap.clock.place(audio->timestamp, arrival, duration);
+    if (block.reset)
+        tap.bins = {};
+    tap.estimated = block.estimated;
+
     for (uint32_t frame = 0; frame < audio->frames; ++frame) {
-        const uint64_t timestamp = audio->timestamp + frame * 1'000'000'000ULL / tap.sample_rate;
+        const uint64_t timestamp = block.start + frame * 1'000'000'000ULL / tap.sample_rate;
         const uint64_t index = timestamp / bin_ns;
         auto &bin = tap.bins[index % capacity];
         if (bin.index != index)
@@ -62,7 +72,7 @@ void capture(void *data, obs_source_t *, const audio_data *audio, bool)
         }
         tap.latest = index;
     }
-    tap.received = os_gettime_ns();
+    tap.received = arrival;
 }
 
 void bind(Tap &tap, obs_source_t *source)
@@ -84,6 +94,8 @@ void bind(Tap &tap, obs_source_t *source)
         tap.bins = {};
         tap.latest = 0;
         tap.received = 0;
+        tap.clock = {};
+        tap.estimated = false;
     }
     if (source)
         obs_source_add_audio_capture_callback(source, capture, &tap);
@@ -200,6 +212,7 @@ struct Filter {
     uint64_t verify_until = 0;
     uint64_t measured_at = 0;
     std::optional<int> offset;
+    bool estimated = false;
     std::string delay_uuid;
     std::optional<int> applied_delay;
 };
@@ -301,6 +314,7 @@ std::string reading(Filter &filter, uint64_t now)
             return reading_card("&mdash;", obs_module_text("WaitingReference"));
         if (!recent(filter.camera))
             return reading_card("&mdash;", obs_module_text("WaitingCamera"));
+        filter.estimated = filter.reference.estimated || filter.camera.estimated;
         const auto last = std::min(filter.reference.latest, filter.camera.latest);
         if (last < span)
             return reading_card("&mdash;", obs_module_text("CollectingAudio"));
@@ -319,14 +333,15 @@ std::string reading(Filter &filter, uint64_t now)
     if (!offset)
         return reading_card("&mdash;", obs_module_text("Uncertain"));
     if (*offset == 0)
-        return reading_card("0 ms");
+        return reading_card("0 ms", filter.estimated ? obs_module_text("EstimatedClock") : nullptr);
     const auto value = std::string(*offset < 0 ? "&minus;" : "+") + std::to_string(std::abs(*offset)) + " ms";
-    return reading_card(value, obs_module_text(*offset < 0 ? "CameraLater" : "CameraEarlier"));
+    const std::string caption = obs_module_text(*offset < 0 ? "CameraLater" : "CameraEarlier");
+    return reading_card(value, (filter.estimated ? caption + "<br/>" + obs_module_text("EstimatedClock") : caption).c_str());
 }
 
 std::optional<int> correction(const Filter &filter, uint64_t now)
 {
-    if (!filter.offset || !filter.applied_delay || now < filter.verify_until ||
+    if (filter.estimated || !filter.offset || !filter.applied_delay || now < filter.verify_until ||
         now - filter.measured_at > 1'500'000'000ULL || !obs_source_enabled(filter.self))
         return {};
     const int target = *filter.applied_delay - *filter.offset;
