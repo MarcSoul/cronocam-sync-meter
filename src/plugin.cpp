@@ -341,7 +341,7 @@ std::string reading(Filter &filter, uint64_t now)
 
 std::optional<int> correction(const Filter &filter, uint64_t now)
 {
-    if (filter.estimated || !filter.offset || !filter.applied_delay || now < filter.verify_until ||
+    if (!filter.offset || !filter.applied_delay || now < filter.verify_until ||
         now - filter.measured_at > 1'500'000'000ULL || !obs_source_enabled(filter.self))
         return {};
     const int target = *filter.applied_delay - *filter.offset;
