@@ -170,6 +170,7 @@ obs_properties_t *delay_properties(void *)
                                                 0, max_delay_ms, 1);
     obs_property_int_set_suffix(slider, " ms");
     obs_properties_add_text(props, "delay_help", obs_module_text("DelayHelp"), OBS_TEXT_INFO);
+    obs_properties_add_text(props, "credits", obs_module_text("Credits"), OBS_TEXT_INFO);
     return props;
 }
 
@@ -478,6 +479,7 @@ obs_properties_t *properties(void *data)
         }
         obs_properties_add_text(props, "reading_legend", obs_module_text("ReadingLegend"), OBS_TEXT_INFO);
         obs_properties_add_text(props, "meter_help", obs_module_text("MeterHelp"), OBS_TEXT_INFO);
+        obs_properties_add_text(props, "credits", obs_module_text("Credits"), OBS_TEXT_INFO);
     }
     SourceList context{list, parent};
     obs_enum_sources(list_source, &context);

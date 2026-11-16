@@ -44,14 +44,40 @@ notarización de Apple. La versión mínima de OBS se documentará tras probar l
 compilaciones. El flujo de CI usa las dependencias que declara la plantilla
 oficial de OBS.
 
-## Uso
+## Cómo sincronizar dos fuentes en OBS
 
-1. En el mezclador de OBS, abre los filtros de la entrada que usarás como
-   referencia, por ejemplo **Audio de cabina**.
-2. Añade **Cronocam Sync Meter**. Selecciona **Cámara 1** como fuente
-   de comparación. La cámara tiene que estar entregando audio a OBS.
-3. Mantén abierta la configuración del filtro. Haz varios golpes irregulares
-   que puedan oír los dos micros y espera unos segundos.
+Cronocam Sync Meter compara en directo el audio de la cámara con el de un
+micrófono externo o una entrada de mesa. Para comparar imagen y sonido, abre
+el sincronizador de [Cronocam.com](https://cronocam.com/sync-tool).
+
+### 1. Selecciona el audio de la cámara
+
+Añade **Cronocam Sync Meter** a la fuente de referencia, por ejemplo **Audio
+de cabina**. Elige el audio de la cámara en el selector y comprueba que ambas
+señales llegan a OBS.
+
+![Selector de la fuente de audio y análisis en Cronocam Sync Meter](https://cronocam.com/assets/obs-plugin/source-analysis.png)
+
+### 2. Pon el retardo primero
+
+En esa misma fuente, añade un único **Cronocam Audio Delay** activo y colócalo
+al principio de la cadena, antes del medidor. Empieza en `0 ms` y deja
+también a cero el desfase de esa fuente en **Propiedades de audio avanzadas**.
+Así el medidor analiza el audio con el retardo aplicado.
+
+![Filtro Cronocam Audio Delay en OBS](https://cronocam.com/assets/obs-plugin/audio-delay.png)
+
+### 3. Aplica y verifica la corrección
+
+Da varias palmadas que puedan captar ambos micros. El plugin compara cuándo
+llega cada palmada a las dos fuentes. Cuando la lectura sea estable, pulsa
+**Ajustar retardo** si el botón está disponible. Sigue dando palmadas y
+comprueba que el desfase restante se acerca a `0 ms`. Si la referencia llega
+tarde y ya está a `0 ms` de retardo, retrasa la otra fuente.
+
+![Lectura estable del desfase y corrección en Cronocam Sync Meter](https://cronocam.com/assets/obs-plugin/stable-reading.png)
+
+[Guía ilustrada en Cronocam.com](https://cronocam.com/obs-plugin)
 
 | Lectura | Interpretación |
 | --- | --- |
